@@ -9,16 +9,17 @@ import { IoMdClose } from "react-icons/io";
 import Card from "./Card";
 import NoResults from "./NoResults";
 import Loading from "./Loading";
-import FeaturedBooks from "./FeaturedBooks";
 import Testimonials from "./Testimonials";
 
 import Logo from "../images/Book.png";
 import Spline from "@splinetool/react-spline";
+import noCover from "../images/NoImage.svg";
 
 export default function Main() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [bookData, setBookData] = useState([]);
+  const [randomBooks, setRandomBooks] = useState([]); // New state for random books
   const [searchTerm, setSearchTerm] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,6 +67,13 @@ export default function Main() {
     }
   }, [favorites, saved, cart]);
 
+  // Fetch random books on component mount and when hasSearched changes
+  useEffect(() => {
+    if (!hasSearched) {
+      fetchRandomBooks();
+    }
+  }, [hasSearched]);
+
   // Scroll position for scroll-to-top button
   useEffect(() => {
     const handleScroll = () => {
@@ -74,6 +82,28 @@ export default function Main() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const fetchRandomBooks = () => {
+    setLoading(true);
+    const subjects = [
+      'fiction', 'fantasy', 'science', 'history', 
+      'romance', 'mystery', 'biography', 'technology'
+    ];
+    const randomSubject = subjects[Math.floor(Math.random() * subjects.length)];
+    
+    axios
+      .get(
+        `https://www.googleapis.com/books/v1/volumes?q=subject:${randomSubject}&maxResults=12&key=AIzaSyDaLzmtMXyLkRnXJzGuxjkRfYJGYpmrqFM`
+      )
+      .then((res) => {
+        setRandomBooks(res.data.items || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.log(err);
+        setLoading(false);
+      });
+  };
 
   const toggleFavorite = (bookId) => {
     setFavorites((prev) =>
@@ -204,20 +234,23 @@ export default function Main() {
       });
   };
 
-      const categoryColors = [
-      "from-pink-100 to-pink-200",
-      "from-yellow-100 to-yellow-200",
-      "from-green-100 to-green-200",
-      "from-blue-100 to-blue-200",
-      "from-purple-100 to-purple-200",
-      "from-red-100 to-red-200",
-      "from-indigo-100 to-indigo-200",
-      "from-emerald-100 to-emerald-200",
-      "from-orange-100 to-orange-200",
-      "from-cyan-100 to-cyan-200",
-      "from-lime-100 to-lime-200",
-      "from-rose-100 to-rose-200",
-    ];
+  const categoryColors = [
+    "from-pink-100 to-pink-200",
+    "from-yellow-100 to-yellow-200",
+    "from-green-100 to-green-200",
+    "from-blue-100 to-blue-200",
+    "from-purple-100 to-purple-200",
+    "from-red-100 to-red-200",
+    "from-indigo-100 to-indigo-200",
+    "from-emerald-100 to-emerald-200",
+    "from-orange-100 to-orange-200",
+    "from-cyan-100 to-cyan-200",
+    "from-lime-100 to-lime-200",
+    "from-rose-100 to-rose-200",
+  ];
+
+  // Combine all books for wishlist display
+  const allBooks = [...bookData, ...randomBooks];
 
   return (
     <div className="bg-white min-h-screen">
@@ -318,18 +351,18 @@ export default function Main() {
                       
                       {favorites.length > 0 ? (
                         <div className="max-h-60 overflow-y-auto py-2">
-                          {bookData
-                            .filter(book => favorites.includes(book.id))
+                          {allBooks
+                            .filter(book => book && favorites.includes(book.id))
                             .map(book => (
                               <div key={book.id} className="flex items-center py-2 border-b border-gray-100 last:border-0">
                                 <img
-                                  src={book.volumeInfo.imageLinks?.thumbnail || noCover}
-                                  alt={book.volumeInfo.title}
+                                  src={book.volumeInfo?.imageLinks?.thumbnail || noCover}
+                                  alt={book.volumeInfo?.title}
                                   className="w-10 h-14 object-cover rounded"
                                 />
                                 <div className="ml-3 flex-1">
-                                  <p className="text-sm font-medium text-gray-800 line-clamp-1">{book.volumeInfo.title}</p>
-                                  <p className="text-xs text-gray-500">by {book.volumeInfo.authors?.[0] || 'Unknown'}</p>
+                                  <p className="text-sm font-medium text-gray-800 line-clamp-1">{book.volumeInfo?.title || "Untitled"}</p>
+                                  <p className="text-xs text-gray-500">by {book.volumeInfo?.authors?.[0] || 'Unknown'}</p>
                                 </div>
                                 <button
                                   onClick={(e) => {
@@ -641,16 +674,79 @@ export default function Main() {
           </div>
         </div>
 
-        {/* Featured Books Section */}
+        {/* Random Books Section */}
         {!hasSearched && (
-          <FeaturedBooks 
-            book={bookData} 
-            toggleFavorite={toggleFavorite} 
-            toggleSaved={toggleSaved}
-            favorites={favorites}
-            saved={saved}
-            addToCart={addToCart}
-          />
+          <div className="bg-gray-50 py-16">
+            <div className="container mx-auto px-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-center mb-12"
+              >
+                <h2 className="text-4xl font-bold text-gray-800 mb-4 font-serif">
+                  <span className="text-indigo-600">Featured</span> Books
+                </h2>
+                <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                  Discover our handpicked selection of books across various genres
+                </p>
+                <button
+                  onClick={fetchRandomBooks}
+                  className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center mx-auto"
+                >
+                  Refresh Selection
+                </button>
+              </motion.div>
+
+              {loading ? (
+                <Loading />
+              ) : (
+                <Card 
+                  book={randomBooks} 
+                  favorites={favorites} 
+                  saved={saved}
+                  toggleFavorite={toggleFavorite}
+                  toggleSaved={toggleSaved}
+                  addToCart={addToCart}
+                />
+              )}
+            </div> 
+            {/* Floating Books Animation */}
+      <div className="hidden lg:block">
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ y: 0 }}
+            animate={{ y: [0, -15, 0] }}
+            transition={{
+              duration: 4 + Math.random() * 3,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            style={{
+              left: `${10 + (i * 15)}%`,
+              rotate: `${-10 + Math.random() * 20}deg`
+            }}
+            className="absolute text-indigo-200 opacity-70"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="40"
+              height="40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+          </motion.div>
+        ))}
+      </div>       
+          </div>
         )}
 
         {/* Loading Animation */}
@@ -665,7 +761,7 @@ export default function Main() {
               transition={{ duration: 0.5 }}
               className="container mx-auto px-4"
             >
-              <h2 className="text-3xl sm:text-4xl font-bold text-center mb-8 text-gray-800">
+              <h2 className="text-4xl font-bold text-gray-800  text-center mb-4 font-serif">
                 {searchTerm ? (
                   <>
                     <span className="text-indigo-600">Results</span> for "{searchTerm}"
